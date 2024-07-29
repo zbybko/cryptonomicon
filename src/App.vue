@@ -9,7 +9,8 @@ export default {
         {name: "BTC", price: "100"},
         {name: "ETH", price: "100"},
         {name: "DOGE", price: "100"},
-      ]
+      ],
+      sell: null,
     };
   },
 
@@ -40,7 +41,7 @@ export default {
             >
             <div class="mt-1 relative rounded-md shadow-md">
               <input
-                  v-model = "name"
+                  v-model="name"
                   @keyup.enter="add"
                   type="text"
                   name="wallet"
@@ -48,9 +49,10 @@ export default {
                   class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
                   placeholder="Например DOGE"
               />
-            </div><div class="mt-1 relative rounded-md shadow-md">
+            </div>
+            <div class="mt-1 relative rounded-md shadow-md">
               <input
-                  v-model = "price"
+                  v-model="price"
                   @keyup.enter="add"
                   type="text"
                   name="wallet"
@@ -106,7 +108,11 @@ export default {
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
               v-for="t in tickers"
+              @click="sell = t"
               :key="t.name"
+              :class="{
+                'border-4': sell === t
+              }"
               class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
@@ -119,7 +125,7 @@ export default {
             </div>
             <div class="w-full border-t border-gray-200"></div>
             <button
-                @click="handleDelete(t)"
+                @click.stop="handleDelete(t)"
                 class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
             >
               <svg
@@ -141,9 +147,9 @@ export default {
         </dl>
         <hr class="w-full border-t border-gray-600 my-4"/>
       </template>
-      <section class="relative">
+      <section class="relative" v-if="sell">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          VUE - USD
+          {{ sell.name }} - USD
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
@@ -162,6 +168,7 @@ export default {
         <button
             type="button"
             class="absolute top-0 right-0"
+            @click="sell = null"
         >
           <svg
               xmlns="http://www.w3.org/2000/svg"
