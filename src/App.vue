@@ -3,25 +3,25 @@ export default {
   name: 'App',
   data() {
     return {
-      name: "default",
-      price: "default",
-      tickers: [
-        {name: "BTC", price: "100"},
-        {name: "ETH", price: "100"},
-        {name: "DOGE", price: "100"},
-      ],
+      name: "BTC",
+      tickers: [],
       sell: null,
     };
   },
 
   methods: {
     add() {
-      const newTicker = {
+      const currentTicker = {
         name: this.name,
-        price: this.price,
+        price: '-',
       };
-
-      this.tickers.push(newTicker);
+      this.tickers.push(currentTicker);
+      setInterval(async () => {
+        const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=EUR&api_key=51eb80d25b167611647f40bada38cf68e0d4868cd515da24c624adfa9cbdbd22`);
+        const data = await f.json();
+        console.log(data);
+        this.tickers.find(t => t.name === currentTicker.name).price = data.EUR > 1 ? data.EUR.toFixed(2) : data.EUR.toPrecision(2);
+      }, 3000);
     },
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter(ticker => ticker !== tickerToRemove);
@@ -50,18 +50,7 @@ export default {
                   placeholder="Например DOGE"
               />
             </div>
-            <div class="mt-1 relative rounded-md shadow-md">
-              <input
-                  v-model="price"
-                  @keyup.enter="add"
-                  type="text"
-                  name="wallet"
-                  id="wallet"
-                  class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
-                  placeholder="Например DOGE"
-              />
-            </div>
-            <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
+            <div class="flex bg-white shadow-md p-1 rounded-mdshadow-md flex-wrap">
             <span
                 class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
               BTC
