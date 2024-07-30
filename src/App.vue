@@ -3,9 +3,10 @@ export default {
   name: 'App',
   data() {
     return {
-      name: "BTC",
+      name: "",
       tickers: [],
       sell: null,
+      graph: []
     };
   },
 
@@ -19,9 +20,23 @@ export default {
       setInterval(async () => {
         const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=EUR&api_key=51eb80d25b167611647f40bada38cf68e0d4868cd515da24c624adfa9cbdbd22`);
         const data = await f.json();
-        console.log(data);
         this.tickers.find(t => t.name === currentTicker.name).price = data.EUR > 1 ? data.EUR.toFixed(2) : data.EUR.toPrecision(2);
+        if (this.sell?.name === currentTicker.name) {
+          this.graph.push(data.EUR);
+        }
       }, 3000);
+      this.name = "";
+    },
+    normilizeGraph() {
+      const maxValue = Math.max(...this.graph);
+      const minValue = Math.min(...this.graph);
+      return this.graph.map(
+          price => 5 + ((price - minValue) * 100) / (maxValue - minValue)
+      )
+    },
+    select (ticker) {
+      this.sell = ticker;
+      this.graph = [];
     },
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter(ticker => ticker !== tickerToRemove);
@@ -97,8 +112,8 @@ export default {
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
               v-for="t in tickers"
-              @click="sell = t"
               :key="t.name"
+              @click="select(t)"
               :class="{
                 'border-4': sell === t
               }"
@@ -142,16 +157,10 @@ export default {
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
-              class="bg-purple-800 border w-10 h-24"
-          ></div>
-          <div
-              class="bg-purple-800 border w-10 h-32"
-          ></div>
-          <div
-              class="bg-purple-800 border w-10 h-48"
-          ></div>
-          <div
-              class="bg-purple-800 border w-10 h-16"
+              v-for="(bar, idx) in normilizeGraph()"
+              :key="idx"
+              :style="{ height: `${bar}%` }"
+              class="bg-purple-800 border w-10"
           ></div>
         </div>
         <button
@@ -162,7 +171,6 @@ export default {
           <svg
               xmlns="http://www.w3.org/2000/svg"
               xmlns:xlink="http://www.w3.org/1999/xlink"
-              xmlns:svgjs="http://svgjs.com/svgjs"
               version="1.1"
               width="30"
               height="30"
