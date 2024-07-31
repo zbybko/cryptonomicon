@@ -11,6 +11,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "trading-vue-js": "^1.0.2",
     "vue": "^3.4.29"
   },
   "devDependencies": {
