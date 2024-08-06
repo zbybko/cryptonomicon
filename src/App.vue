@@ -192,9 +192,8 @@ export default {
       </section>
     </div>
   </div>
-  <Chart />
 </template>
 
-<style src="/src/app.css">
+<style>
 
 </style>
