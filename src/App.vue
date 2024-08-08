@@ -12,6 +12,7 @@ export default {
       filteredTickers: [],
       mounted: false,
       searchQuery: '',
+      tickerExist: false
     };
   },
   mounted() {
@@ -24,12 +25,19 @@ export default {
         symbol: this.searchQuery,
         price: '-',
       };
-      this.tickers.push(currentTicker);
+      if (!this.tickers.find(t => t.symbol === currentTicker.symbol)) {
+        this.tickerExist = false;
+        this.tickers.push(currentTicker);
+      }
+      else {
+        this.tickerExist = true;
+      }
+
       setInterval(async () => {
         const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.symbol}&tsyms=EUR&api_key=51eb80d25b167611647f40bada38cf68e0d4868cd515da24c624adfa9cbdbd22`);
         const data = await f.json();
         this.tickers.find(t => t.symbol === currentTicker.symbol).price = data.EUR === undefined ? 0 : data.EUR > 1 ? data.EUR.toFixed(2) : data.EUR.toPrecision(2);
-        if (this.sell?.name === currentTicker.symbol) {
+        if (this.sell?.symbol === currentTicker.symbol) {
           this.graph.push(data.EUR);
         }
       }, 5000);
@@ -117,7 +125,9 @@ export default {
                 {{ symbol }}
             </span>
             </div>
-            <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
+            <div
+                v-if="tickerExist"
+                class="text-sm text-red-600">Такой тикер уже добавлен</div>
           </div>
         </div>
         <button
@@ -187,7 +197,7 @@ export default {
       </template>
       <section class="relative" v-if="sell">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ sell.name }} - USD
+          {{ sell.symbol }} - USD
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
