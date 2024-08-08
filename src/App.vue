@@ -1,31 +1,39 @@
 <script>
 export default {
+
+
   name: 'App',
   data() {
     return {
-      name: "",
       tickers: [],
       sell: null,
-      graph: []
+      graph: [],
+      tickerSymbols: [],
+      filteredTickers: [],
+      mounted: false,
+      searchQuery: '',
     };
+  },
+  mounted() {
+    this.fetchTickers();
   },
 
   methods: {
     add() {
       const currentTicker = {
-        name: this.name,
+        symbol: this.searchQuery,
         price: '-',
       };
       this.tickers.push(currentTicker);
       setInterval(async () => {
-        const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=EUR&api_key=51eb80d25b167611647f40bada38cf68e0d4868cd515da24c624adfa9cbdbd22`);
+        const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.symbol}&tsyms=EUR&api_key=51eb80d25b167611647f40bada38cf68e0d4868cd515da24c624adfa9cbdbd22`);
         const data = await f.json();
-        this.tickers.find(t => t.name === currentTicker.name).price = data.EUR > 1 ? data.EUR.toFixed(2) : data.EUR.toPrecision(2);
-        if (this.sell?.name === currentTicker.name) {
+        this.tickers.find(t => t.symbol === currentTicker.symbol).price = data.EUR === undefined ? 0 : data.EUR > 1 ? data.EUR.toFixed(2) : data.EUR.toPrecision(2);
+        if (this.sell?.name === currentTicker.symbol) {
           this.graph.push(data.EUR);
         }
-      }, 3000);
-      this.name = "";
+      }, 5000);
+      this.searchQuery = "";
     },
     normilizeGraph() {
       const maxValue = Math.max(...this.graph);
@@ -34,19 +42,53 @@ export default {
           price => 5 + ((price - minValue) * 100) / (maxValue - minValue)
       )
     },
-    select (ticker) {
+    onInput() {
+      if (this.searchQuery) {
+        this.filteredTickers = this.tickerSymbols
+            .filter(ticker => ticker.toLowerCase().includes(this.searchQuery.toLowerCase()))
+            .slice(0, 4);
+      } else {
+        this.filteredTickers = this.tickerSymbols.slice(17, 21);
+      }
+    },
+    async fetchTickers() {
+      try {
+        const response = await fetch('https://min-api.cryptocompare.com/data/all/coinlist?summary=true');
+        const allDataTickers = await response.json();
+        this.tickerSymbols = Object.keys(allDataTickers.Data);
+        this.mounted = true;
+        this.filteredTickers = this.tickerSymbols.slice(17, 21);
+      } catch (error) {
+        console.error('Ошибка при получении данных:', error);
+      }
+    },
+    select(ticker) {
       this.sell = ticker;
       this.graph = [];
     },
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter(ticker => ticker !== tickerToRemove);
-    }
+    },
+    insert(symbol) {
+      this.searchQuery = symbol;
+    },
+
   }
 }
 </script>
 
 <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
+    <div
+        v-if="!mounted"
+        class="fixed w-100 h-100 opacity-80 bg-purple-800 inset-0 z-50 flex items-center justify-center">
+      <svg class="animate-spin -ml-1 mr-3 h-12 w-12 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+           viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    </div>
     <div class="container">
       <section>
         <div class="flex">
@@ -56,31 +98,23 @@ export default {
             >
             <div class="mt-1 relative rounded-md shadow-md">
               <input
-                  v-model="name"
+                  v-model="searchQuery"
                   @keyup.enter="add"
+                  @input="onInput"
                   type="text"
                   name="wallet"
                   id="wallet"
-                  class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
+                  class="block w-full p-1 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
                   placeholder="Например DOGE"
               />
             </div>
             <div class="flex bg-white shadow-md p-1 rounded-mdshadow-md flex-wrap">
             <span
+                v-for="symbol in filteredTickers"
+                :key="symbol"
+                @click="insert(symbol)"
                 class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              BTC
-            </span>
-              <span
-                  class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              DOGE
-            </span>
-              <span
-                  class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              BCH
-            </span>
-              <span
-                  class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              CHD
+                {{ symbol }}
             </span>
             </div>
             <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
@@ -112,7 +146,7 @@ export default {
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
               v-for="t in tickers"
-              :key="t.name"
+              :key="t.symbol"
               @click="select(t)"
               :class="{
                 'border-4': sell === t
@@ -121,7 +155,7 @@ export default {
           >
             <div class="px-4 py-5 sm:p-6 text-center">
               <dt class="text-sm font-medium text-gray-500 truncate">
-                {{ t.name }} - USD
+                {{ t.symbol }} - USD
               </dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
                 {{ t.price }}
