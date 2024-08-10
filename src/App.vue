@@ -1,17 +1,16 @@
 <script>
 export default {
-
-
   name: 'App',
   data() {
     return {
+      searchQuery: '',
       tickers: [],
       sell: null,
       graph: [],
       tickerSymbols: [],
       filteredTickers: [],
       mounted: false,
-      searchQuery: '',
+      isAddButtonDis: false,
       tickerExist: false
     };
   },
@@ -23,16 +22,9 @@ export default {
     add() {
       const currentTicker = {
         symbol: this.searchQuery,
-        price: '-',
+        price: '0',
       };
-      if (!this.tickers.find(t => t.symbol === currentTicker.symbol)) {
-        this.tickerExist = false;
-        this.tickers.push(currentTicker);
-      }
-      else {
-        this.tickerExist = true;
-      }
-
+      this.tickers.push(currentTicker);
       setInterval(async () => {
         const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.symbol}&tsyms=EUR&api_key=51eb80d25b167611647f40bada38cf68e0d4868cd515da24c624adfa9cbdbd22`);
         const data = await f.json();
@@ -40,14 +32,14 @@ export default {
         if (this.sell?.symbol === currentTicker.symbol) {
           this.graph.push(data.EUR);
         }
-      }, 5000);
+      }, 2000);
       this.searchQuery = "";
     },
     normilizeGraph() {
       const maxValue = Math.max(...this.graph);
       const minValue = Math.min(...this.graph);
       return this.graph.map(
-          price => 5 + ((price - minValue) * 100) / (maxValue - minValue)
+          price => (price - minValue) * 100 / (maxValue - minValue)
       )
     },
     onInput() {
@@ -57,6 +49,15 @@ export default {
             .slice(0, 4);
       } else {
         this.filteredTickers = this.tickerSymbols.slice(17, 21);
+      }
+
+      if (this.tickers.find(t => t.symbol.toLowerCase() === this.searchQuery.toLowerCase())) { // Проверка существует ли вводимый символ в массиве
+        this.isAddButtonDis = true;
+        this.tickerExist = true;
+      }
+      else {
+        this.isAddButtonDis = false;
+        this.tickerExist = false;
       }
     },
     async fetchTickers() {
@@ -79,6 +80,11 @@ export default {
     },
     insert(symbol) {
       this.searchQuery = symbol;
+
+      this.$nextTick(() => {
+        this.$refs.searchInput.dispatchEvent(new Event('input'));
+      })
+
     },
 
   }
@@ -109,6 +115,7 @@ export default {
                   v-model="searchQuery"
                   @keyup.enter="add"
                   @input="onInput"
+                  ref="searchInput"
                   type="text"
                   name="wallet"
                   id="wallet"
@@ -121,7 +128,8 @@ export default {
                 v-for="symbol in filteredTickers"
                 :key="symbol"
                 @click="insert(symbol)"
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
+                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
+            >
                 {{ symbol }}
             </span>
             </div>
@@ -131,6 +139,7 @@ export default {
           </div>
         </div>
         <button
+            :disabled = "isAddButtonDis"
             @click="add"
             type="button"
             class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
@@ -204,7 +213,7 @@ export default {
               v-for="(bar, idx) in normilizeGraph()"
               :key="idx"
               :style="{ height: `${bar}%` }"
-              class="bg-purple-800 border w-10"
+              class="bg-purple-800 border w-1"
           ></div>
         </div>
         <button
