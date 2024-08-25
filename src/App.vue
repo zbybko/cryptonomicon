@@ -13,7 +13,9 @@ export default {
       isAddButtonDis: false,
       tickerExist: false,
       filter: '',
-      page: 1
+      page: 1,
+      maxItemsPerPage: 6,
+      hasNextPage: true,
     };
   },
   mounted() {
@@ -99,9 +101,21 @@ export default {
       this.$nextTick(() => {
         this.$refs.searchInput.dispatchEvent(new Event('input'));
       })
-
     },
+    filteredTickersCard() {
+      const start = (this.page - 1) * this.maxItemsPerPage;
+      const end = this.page * this.maxItemsPerPage;
+      const filteredTickers = this.tickers.filter(ticker => ticker.symbol.toLowerCase().includes(this.filter.toLowerCase()));
+      this.hasNextPage = filteredTickers.length > end;
+
+      return filteredTickers.length > 0 ? filteredTickers.slice(start, end) : [];
+    }
   },
+  watch: {
+    filter() {
+      this.page = 1;
+    }
+  }
 }
 </script>
 
@@ -175,27 +189,36 @@ export default {
           Добавить
         </button>
       </section>
-      <p>
-        <div>Фильтр:
+
+      <template v-if="tickers.length > 0">
+        <hr class="w-full border-t border-gray-600 my-4"/>
+        <div>
+          <div
+            class="mb-2"
+          >
+            Фильтр:
+          </div>
           <input
               v-model="filter"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           />
+          <button
+              v-if="page > 1"
+              @click="page = page - 1"
+              class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Назад
+          </button>
+          <button
+              v-if="hasNextPage"
+              @click="page = page + 1"
+              class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Вперед
+          </button>
         </div>
-        <button
-            class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-          Назад
-        </button>
-        <button
-            class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-        ">
-        Вперед
-        </button>
-      </p>
-      <template v-if="tickers.length > 0">
         <hr class="w-full border-t border-gray-600 my-4"/>
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
-              v-for="t in tickers"
+              v-for="t in filteredTickersCard()"
               :key="t.symbol"
               @click="select(t)"
               :class="{
