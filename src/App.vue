@@ -11,29 +11,55 @@ export default {
       filteredTickers: [],
       mounted: false,
       isAddButtonDis: false,
-      tickerExist: false
+      tickerExist: false,
+      filter: '',
+      page: 1,
+      maxItemsPerPage: 6,
+      hasNextPage: true,
     };
   },
   mounted() {
     this.fetchTickers();
+    const tickersStorage = localStorage.getItem('cryptonomicon-list');
+
+    if (tickersStorage) {
+      this.tickers = JSON.parse(tickersStorage);
+
+      this.tickers.forEach(ticker => {
+        this.getSubscribeTickers(ticker.symbol);
+      });
+    }
+    const urlStorage = Object.fromEntries(new URL(window.location).searchParams.entries())
+
+    if (urlStorage.filter) {
+      this.filter = urlStorage.filter;
+    }
+    if (urlStorage.page) {
+      this.page = parseInt(urlStorage.page);
+    }
   },
 
   methods: {
+    getSubscribeTickers(tickerSymbol) {
+      setInterval(async () => {
+        const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${tickerSymbol}&tsyms=EUR&api_key=51eb80d25b167611647f40bada38cf68e0d4868cd515da24c624adfa9cbdbd22`);
+        const data = await f.json();
+        this.tickers.find(t => t.symbol === tickerSymbol).price = data.EUR === undefined ? 0 : data.EUR > 1 ? data.EUR.toFixed(2) : data.EUR.toPrecision(2);
+        if (this.sell?.symbol === tickerSymbol) {
+          this.graph.push(data.EUR);
+        }
+      }, 2000);
+    },
     add() {
       const currentTicker = {
         symbol: this.searchQuery,
         price: '0',
       };
+      this.getSubscribeTickers(currentTicker.symbol);
       this.tickers.push(currentTicker);
-      setInterval(async () => {
-        const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.symbol}&tsyms=EUR&api_key=51eb80d25b167611647f40bada38cf68e0d4868cd515da24c624adfa9cbdbd22`);
-        const data = await f.json();
-        this.tickers.find(t => t.symbol === currentTicker.symbol).price = data.EUR === undefined ? 0 : data.EUR > 1 ? data.EUR.toFixed(2) : data.EUR.toPrecision(2);
-        if (this.sell?.symbol === currentTicker.symbol) {
-          this.graph.push(data.EUR);
-        }
-      }, 2000);
       this.searchQuery = "";
+      this.onInput();
+      localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers));
     },
     normilizeGraph() {
       const maxValue = Math.max(...this.graph);
@@ -54,8 +80,7 @@ export default {
       if (this.tickers.find(t => t.symbol.toLowerCase() === this.searchQuery.toLowerCase())) { // Проверка существует ли вводимый символ в массиве
         this.isAddButtonDis = true;
         this.tickerExist = true;
-      }
-      else {
+      } else {
         this.isAddButtonDis = false;
         this.tickerExist = false;
       }
@@ -84,9 +109,25 @@ export default {
       this.$nextTick(() => {
         this.$refs.searchInput.dispatchEvent(new Event('input'));
       })
-
     },
+    filteredTickersCard() {
+      const start = (this.page - 1) * this.maxItemsPerPage;
+      const end = this.page * this.maxItemsPerPage;
+      const filteredTickers = this.tickers.filter(ticker => ticker.symbol.toLowerCase().includes(this.filter.toLowerCase()));
+      this.hasNextPage = filteredTickers.length > end;
 
+      return filteredTickers.length > 0 ? filteredTickers.slice(start, end) : [];
+    }
+  },
+  watch: {
+    filter() {
+      this.page = 1;
+
+      history.pushState(null, document.title, `${window.location.origin}?filter=${this.filter}&page=${this.page}`);
+    },
+    page() {
+      history.pushState(null, document.title, `${window.location.origin}?filter=${this.filter}&page=${this.page}`);
+    }
   }
 }
 </script>
@@ -135,11 +176,12 @@ export default {
             </div>
             <div
                 v-if="tickerExist"
-                class="text-sm text-red-600">Такой тикер уже добавлен</div>
+                class="text-sm text-red-600">Такой тикер уже добавлен
+            </div>
           </div>
         </div>
         <button
-            :disabled = "isAddButtonDis"
+            :disabled="isAddButtonDis"
             @click="add"
             type="button"
             class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
@@ -160,11 +202,36 @@ export default {
           Добавить
         </button>
       </section>
+
       <template v-if="tickers.length > 0">
+        <hr class="w-full border-t border-gray-600 my-4"/>
+        <div>
+          <div
+              class="mb-2"
+          >
+            Фильтр:
+          </div>
+          <input
+              v-model="filter"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          />
+          <button
+              v-if="page > 1"
+              @click="page = page - 1"
+              class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Назад
+          </button>
+          <button
+              v-if="hasNextPage"
+              @click="page = page + 1"
+              class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Вперед
+          </button>
+        </div>
         <hr class="w-full border-t border-gray-600 my-4"/>
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
-              v-for="t in tickers"
+              v-for="t in filteredTickersCard()"
               :key="t.symbol"
               @click="select(t)"
               :class="{
