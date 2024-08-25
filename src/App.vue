@@ -29,6 +29,14 @@ export default {
         this.getSubscribeTickers(ticker.symbol);
       });
     }
+    const urlStorage = Object.fromEntries(new URL(window.location).searchParams.entries())
+
+    if (urlStorage.filter) {
+      this.filter = urlStorage.filter;
+    }
+    if (urlStorage.page) {
+      this.page = parseInt(urlStorage.page);
+    }
   },
 
   methods: {
@@ -114,6 +122,11 @@ export default {
   watch: {
     filter() {
       this.page = 1;
+
+      history.pushState(null, document.title, `${window.location.origin}?filter=${this.filter}&page=${this.page}`);
+    },
+    page() {
+      history.pushState(null, document.title, `${window.location.origin}?filter=${this.filter}&page=${this.page}`);
     }
   }
 }
@@ -194,7 +207,7 @@ export default {
         <hr class="w-full border-t border-gray-600 my-4"/>
         <div>
           <div
-            class="mb-2"
+              class="mb-2"
           >
             Фильтр:
           </div>
